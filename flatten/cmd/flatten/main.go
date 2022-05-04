@@ -1,11 +1,12 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/josestg/go/flatten"
+	"io"
 	"os"
 	"strings"
 )
@@ -21,8 +22,8 @@ The flatten supports both JSON and YAML as input.
 `
 
 func main() {
-
 	args := os.Args[1:]
+
 	if len(args) > 0 {
 		if strings.EqualFold(args[0], "help") {
 			fmt.Fprint(os.Stderr, help)
@@ -30,29 +31,22 @@ func main() {
 		}
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		if err := scanner.Err(); err != nil {
-			fmt.Fprintf(os.Stderr, "flatten: encoding: %v\n", err)
-			os.Exit(1)
-		}
+	var object flatten.Any
+	buf := bytes.NewBuffer(nil)
+	_, err := io.Copy(buf, os.Stdin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "flatten: read input: %v\n", err)
+		os.Exit(1)
+	}
+	// This Unmarshal supports JSON and Yaml.
+	if err := yaml.Unmarshal(buf.Bytes(), &object); err != nil {
+		fmt.Fprintf(os.Stderr, "flatten: decoding: %v\n", err)
+		os.Exit(1)
+	}
 
-		cmd := scanner.Text()
-		if cmd == ".exit" {
-			return
-		}
-
-		var object flatten.Any
-		// This Unmarshal supports JSON and Yaml.
-		if err := yaml.Unmarshal(scanner.Bytes(), &object); err != nil {
-			fmt.Fprintf(os.Stderr, "flatten: yaml: decoding: %v\n", err)
-			os.Exit(1)
-		}
-
-		flatObject := flatten.Flatten(object, ".")
-		if err := json.NewEncoder(os.Stdout).Encode(&flatObject); err != nil {
-			fmt.Fprintf(os.Stderr, "flatten: encoding: %v\n", err)
-			os.Exit(1)
-		}
+	flatObject := flatten.Flatten(object, ".")
+	if err := json.NewEncoder(os.Stdout).Encode(&flatObject); err != nil {
+		fmt.Fprintf(os.Stderr, "flatten: encoding: %v\n", err)
+		os.Exit(1)
 	}
 }
