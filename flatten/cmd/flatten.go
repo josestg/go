@@ -7,9 +7,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/josestg/go/flatten"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
 
 const help = `Flattens the object - it'll return an object one level deep, 
@@ -31,9 +29,6 @@ func main() {
 			return
 		}
 	}
-
-	exit := make(chan os.Signal, 1)
-	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
